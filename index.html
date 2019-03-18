@@ -1,0 +1,86 @@
+<html>
+	<head>
+		<title>CSV Test</title>
+		<script type="text/javascript" src="js/csv.js"></script>
+		<script type="text/javascript" src="js/csvsimple.js"></script>
+		<script type="text/javascript" src="js/encoding.js"></script>
+	</head>
+	<body>
+		人事労務freeeからエクスポートした月次勤怠データを選択してください。<br>
+		<input type="file" id="files" name="files[]" multiple>
+	</body>
+	<script type="text/javascript">
+	document.getElementById('files').addEventListener('change', handleFileSelect, false);
+	function handleFileSelect(evt) {
+		var data = null;
+		var file = evt.target.files[0];
+		var reader = new FileReader();
+		reader.readAsBinaryString(file);
+		reader.onload = function(event) {
+			var result = event.target.result;
+			var sjisArray = str2Array(result);
+			var uniArray = Encoding.convert(sjisArray, 'UNICODE', 'AUTO');
+			var result = Encoding.codeToString(uniArray);
+			console.log(result); //csvデータ(string)
+			csvParsed = csvSimple.parse(result);    
+			var csv = fillCsv(csvParsed);
+			SaveToFile('payme_import.csv', csv);
+		};
+		reader.onerror = function() {
+			console.log('ファイルが読み込めませんでした。 ' + file.fileName);
+		};
+	}
+	function str2Array(str) {
+		var array = [],i,il=str.length;
+		for(i=0;i<il;i++) array.push(str.charCodeAt(i));
+		return array;
+	}
+
+	function convertCSVtoArray(str){ // 読み込んだCSVデータが文字列として渡される
+    var result = []; // 最終的な二次元配列を入れるための配列
+    var tmp = str.split("\n"); // 改行を区切り文字として行を要素とした配列を生成
+ 
+    // 各行ごとにカンマで区切った文字列を要素とした二次元配列を生成
+    for(var i=0;i<tmp.length;++i){
+        result[i] = tmp[i].split(',');
+    }
+ 
+    alert(result[1][2]); // 300yen
+	}
+
+	function fillCsv(_csv) {
+		var csv = _csv;
+
+		for (var i = 0; i < csv.length; i++) {
+			var now = new Date();
+			var month = ('0'+(now.getMonth() + 1)).slice(-2); //月をフォーマットに合うように2桁で出力
+			console.log(month);
+
+			csv[0][0] = '社員番号';
+			csv[i][0] = csv[i][1];
+			csv[0][1] = '勤務日';
+			csv[i][1] = '2019'+month+'01';
+			csv[0][2] = '実働時間';
+			csv[i][2] = csv[i][4];
+			csv[i].splice(0,0);
+			csv[i].splice(2,2);
+			csv[i].splice(3,8);
+		}
+		var csvFile = csvSimple.toCSV(csv);
+		console.log(csvFile);
+		return csvFile;
+	}
+
+	function SaveToFile(FileName, Stream) {
+		 if (window.navigator.msSaveBlob) {
+			 window.navigator.msSaveBlob(new Blob([Stream], {type: "text/csv"}), FileName);
+		 } else {
+			 var a = document.createElement("a");
+			 a.href = URL.createObjectURL(new Blob([Stream], {type: "text/csv"}));
+			 a.target   = '_blank';
+			 a.download = FileName;
+			 a.click();
+		 }
+	}
+	</script>
+</html>
